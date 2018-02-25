@@ -1,6 +1,11 @@
+import yaml
+import re
+import subprocess
+import time
 from typing import List, Tuple, Optional, TypeVar
 from pkg_resources import parse_version, SetuptoolsVersion
 from pathlib import Path
+from pygit2 import clone_repository, Repository, GIT_FETCH_PRUNE
 
 
 V = TypeVar("V", bound="Version")
@@ -42,8 +47,12 @@ class Version(object):
 
 
 class Documentation(object):
+    """
+    Abstract class for all documentation updaters
+    """
     def __init__(self):
         self.versions: List[Version] = []
+        """List of version which have to be updated"""
 
     def check_updates(self):
         """
@@ -72,3 +81,174 @@ class Documentation(object):
                 updated.append((version, path))
 
         return updated
+
+
+class TagDocumentation(Documentation):
+    """
+    Base class for documentation updaters which are using tags to find new versions.
+    """
+
+    processed_versions_file: str
+    """File name of the processed versions"""
+
+    build_folder: str = "build"
+    """Name of the build folder"""
+
+    doc_name: str
+    """Name of the generated documentation file"""
+
+    def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str):
+        """
+        Initialize updater object with configuration.
+
+        :param path: Path to the documentation generator.
+        :param repository_path: Path to cloned repository.
+        :param git_url: URL to git repository.
+        :param minimum_version: Minimum supported version.
+        """
+        super().__init__()
+
+        self.path = Path(path)
+        """Path to Kubernetes documentation generator"""
+
+        self.repository_path = self.path.joinpath(repository_path)
+        """Path to Kubernetes repository"""
+
+        self.git_url = git_url
+        """URL to git repository"""
+
+        self.repo: Repository = None
+        """Git repository"""
+
+        self.minimum_version = Version(minimum_version)
+        """Minimum supported version"""
+
+        self.processed_versions: List[Version] = []
+        """List of already versions"""
+
+        self.load_processed_versions()
+        self.initialize_repo()
+
+    def load_processed_versions(self):
+        """
+        Load processed versions from file on disk.
+
+        Versions are available in the `processed_versions` variable.
+        """
+        with open(self.__class__.processed_versions_file) as f:
+            config = yaml.load(f)
+            versions = config["versions"]
+            self.processed_versions = [Version(v) for v in versions]
+
+    def initialize_repo(self):
+        """
+        Initialize local repository.
+
+        Repository is available from `repo` veriable.
+        """
+        # Initialize new repository
+        if not self.repository_path.exists():
+            print(f"{self.__class__.__name__} clonning...")
+            self.repository_path.mkdir(parents=True)
+            self.repo = clone_repository(self.git_url, str(self.repository_path))
+        # Read repository
+        else:
+            self.repo = Repository(str(self.repository_path))
+
+    def save_processed_versions(self):
+        """
+        Save processed version to file on disk.
+        """
+        with open(self.__class__.processed_versions_file, "w") as f:
+            versions = [v.name for v in sorted(self.processed_versions)]
+            config = {"versions": versions}
+            yaml.dump(config, f, default_flow_style=False)
+
+    @classmethod
+    def normalize_tag(cls, tag: str) -> str:
+        """
+        Normalize version from tag.
+
+        It can for example remove "v" at the beginning of the name.
+        """
+        return tag
+
+    def check_updates(self):
+        """
+        Check for new available versions.
+
+        Fetches new tags
+        """
+        super().check_updates()
+        print(f"{self.__class__.__name__} fetching...")
+        for remote in self.repo.remotes:
+            remote.fetch(prune=GIT_FETCH_PRUNE)
+
+        # Parse versions
+        tag_prefix = "refs/tags/"
+        regex = re.compile(f"^{tag_prefix}")
+        versions: List[Version] = []
+        for tag in filter(lambda r: regex.match(r), self.repo.listall_references()):  # type: str
+            tag = tag.replace(tag_prefix, "")
+
+            tag = self.__class__.normalize_tag(tag)
+
+            version = Version(tag)
+            # Only newer tags
+            if version < self.minimum_version:
+                continue
+
+            # Only not already processed versions:
+            if version in self.processed_versions:
+                continue
+
+            versions.append(version)
+
+        # Sort versions
+        self.versions = sorted(versions)
+
+    @classmethod
+    def command(cls, version: Version) -> str:
+        """
+        Prepares command which will be used to generate documentation.
+        :param version: Version to generate.
+        :return: Command which will be used to generate documentation.
+        """
+        return f"./build.sh {version.name}"
+
+    def update_version(self, version: Version) -> Optional[Path]:
+        """
+        Generate documentation for selected version.
+        :param version: Version to generate.
+        :return: Path to generated documentation.
+        """
+        print(f"{self.__class__.__name__} {version.name} processing...")
+        start_time = time.time()
+        process = subprocess.run(
+            self.__class__.command(version),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            cwd=self.path)
+        stop_time = time.time()
+        time_elapsed = stop_time - start_time
+
+        # Success
+        if process.returncode == 0:
+            print(f"{self.__class__.__name__} {version.name} success {time_elapsed:0.3f}s...")
+            self.processed_versions.append(version)
+            self.save_processed_versions()
+
+            build_path = self.path.\
+                joinpath(self.__class__.build_folder).\
+                joinpath(version.name).\
+                joinpath(self.__class__.doc_name)
+            return build_path
+        # Error
+        else:
+            print(f"{self.__class__.__name__} {version.name} failed...")
+            print("stdout:")
+            print(process.stdout)
+            print("stderr:")
+            print(process.stderr)
+        return None

@@ -6,3 +6,9 @@ kubernetes:
   repository_path: kubernetes
   git_url: https://github.com/kubernetes/kubernetes.git
   minimum_version: "1.9.0"
+
+packer:
+  path: ../packer-dash-doc-generator
+  repository_path: packer
+  git_url: https://github.com/hashicorp/packer.git
+  minimum_version: "1.0.0"
