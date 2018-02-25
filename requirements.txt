@@ -1,0 +1,3 @@
+PyYAML>=3.12
+# brew install libgit2
+pygit2>=0.26.3
