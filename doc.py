@@ -179,30 +179,23 @@ class _RepoUpdater(Documentation):
         Initialize repository and check for new available versions.
         """
         self.initialize_repo()
-        super().check_updates()
-
-    @abstractmethod
-    def update_version(self, version: Version) -> Optional[Path]:
-        pass
 
 
 class _TagUpdater(_RepoUpdater, _ProcessedVersions):
     """
     Handle updating version from the repository tags.
     """
-    def __init__(self, repository_path: str, git_url: str, minimum_version: str, **kwargs):
+    def __init__(self, minimum_version: str, **kwargs):
         """
         Handle updating version from the repository tags.
 
-        :param repository_path: Path to cloned repository.
-        :param git_url: URL to git repository.
         :param minimum_version: Minimum supported version.
         """
 
         self.minimum_version = Version(minimum_version)
         """Minimum supported version"""
 
-        super().__init__(repository_path=repository_path, git_url=git_url, **kwargs)
+        super().__init__(**kwargs)
 
     @classmethod
     def normalize_tag(cls, tag: str) -> str:
@@ -245,26 +238,15 @@ class _TagUpdater(_RepoUpdater, _ProcessedVersions):
         # Sort versions
         self.versions = sorted(versions)
 
-    @abstractmethod
-    def update_version(self, version: Version) -> Optional[Path]:
-        pass
 
-
-class TagDocumentation(_TagUpdater):
+class BaseBuilder(Documentation, _ProcessedVersions):
     """
-    Base class for documentation updaters which are using tags to find new versions.
+    Handle building documentation.
     """
-
-    def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str,
-                 processed_versions_file: str, doc_name: str, build_folder: str = "build"):
+    def __init__(self, doc_name: str, build_folder: str = "build", **kwargs):
         """
-        Initialize updater object with configuration.
+        Handle building documentation.
 
-        :param path: Path to the documentation generator.
-        :param repository_path: Path to cloned repository.
-        :param git_url: URL to git repository.
-        :param minimum_version: Minimum supported version.
-        :param processed_versions_file: File name of the processed versions.
         :param doc_name: Name of the generated documentation file.
         :param build_folder: Name of the build folder.
         """
@@ -274,13 +256,13 @@ class TagDocumentation(_TagUpdater):
         self.doc_name = doc_name
         """Name of the generated documentation file"""
 
-        super().__init__(path=path, repository_path=repository_path, git_url=git_url, minimum_version=minimum_version,
-                         processed_versions_file=processed_versions_file)
+        super().__init__(**kwargs)
 
     @classmethod
     def command(cls, version: Version) -> str:
         """
         Prepares command which will be used to generate documentation.
+
         :param version: Version to generate.
         :return: Command which will be used to generate documentation.
         """
@@ -289,6 +271,7 @@ class TagDocumentation(_TagUpdater):
     def update_version(self, version: Version) -> Optional[Path]:
         """
         Generate documentation for selected version.
+
         :param version: Version to generate.
         :return: Path to generated documentation.
         """
@@ -309,9 +292,9 @@ class TagDocumentation(_TagUpdater):
             self.processed_versions.append(version)
             self.save_processed_versions()
 
-            build_path = self.path.\
-                joinpath(self.build_folder).\
-                joinpath(version.name).\
+            build_path = self.path. \
+                joinpath(self.build_folder). \
+                joinpath(version.name). \
                 joinpath(self.doc_name)
             return build_path
         # Error
@@ -322,3 +305,15 @@ class TagDocumentation(_TagUpdater):
             print("stderr:")
             print(process.stderr)
         return None
+
+
+class TagDocumentation(_TagUpdater, BaseBuilder):
+    """
+    Base class for documentation updaters which are using tags to find new versions.
+    """
+    def __init__(self, **kwargs):
+        """
+        Initialize updater object with configuration.
+        """
+
+        super().__init__(**kwargs)
