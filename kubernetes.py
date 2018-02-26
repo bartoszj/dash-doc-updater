@@ -6,7 +6,7 @@ class Kubernetes(TagDocumentation):
     Kubernetes updater.
     """
     def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str):
-        super().__init__(path, repository_path, git_url, minimum_version,
+        super().__init__(path=path, repository_path=repository_path, git_url=git_url, minimum_version=minimum_version,
                          processed_versions_file="kubernetes.yml", doc_name="Kubernetes.tgz")
 
     @classmethod

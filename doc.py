@@ -93,6 +93,9 @@ class Documentation(ABC):
 
 
 class _ProcessedVersions:
+    """
+    Handle reading and writing processed versions.
+    """
     def __init__(self, processed_versions_file: str, **kwargs):
         """
         Initializer for processed versions, which loads processed versions from the file on disk.
@@ -127,29 +130,21 @@ class _ProcessedVersions:
             yaml.dump(config, f, default_flow_style=False)
 
 
-class TagDocumentation(Documentation, _ProcessedVersions):
-    """
-    Base class for documentation updaters which are using tags to find new versions.
-    """
-
-    def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str,
-                 processed_versions_file: str, doc_name: str, build_folder: str = "build"):
+class _TagUpdater(Documentation, _ProcessedVersions):
+    def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str, **kwargs):
         """
-        Initialize updater object with configuration.
+        Handle updating version from the repository tags.
 
         :param path: Path to the documentation generator.
         :param repository_path: Path to cloned repository.
         :param git_url: URL to git repository.
         :param minimum_version: Minimum supported version.
-        :param processed_versions_file: File name of the processed versions.
-        :param doc_name: Name of the generated documentation file.
-        :param build_folder: Name of the build folder.
         """
         self.path = Path(path)
-        """Path to Kubernetes documentation generator"""
+        """Path to documentation generator"""
 
         self.repository_path = self.path.joinpath(repository_path)
-        """Path to Kubernetes repository"""
+        """Path to GIT repository"""
 
         self.git_url = git_url
         """URL to git repository"""
@@ -160,16 +155,7 @@ class TagDocumentation(Documentation, _ProcessedVersions):
         self.minimum_version = Version(minimum_version)
         """Minimum supported version"""
 
-        self.build_folder = build_folder
-        """Name of the build folder"""
-
-        self.doc_name = doc_name
-        """Name of the generated documentation file"""
-
-        super().__init__(processed_versions_file=processed_versions_file)
-
-        self.load_processed_versions()
-        self.initialize_repo()
+        super().__init__(**kwargs)
 
     def initialize_repo(self):
         """
@@ -229,6 +215,41 @@ class TagDocumentation(Documentation, _ProcessedVersions):
         # Sort versions
         self.versions = sorted(versions)
 
+    @abstractmethod
+    def update_version(self, version: Version):
+        pass
+
+
+class TagDocumentation(_TagUpdater):
+    """
+    Base class for documentation updaters which are using tags to find new versions.
+    """
+
+    def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str,
+                 processed_versions_file: str, doc_name: str, build_folder: str = "build"):
+        """
+        Initialize updater object with configuration.
+
+        :param path: Path to the documentation generator.
+        :param repository_path: Path to cloned repository.
+        :param git_url: URL to git repository.
+        :param minimum_version: Minimum supported version.
+        :param processed_versions_file: File name of the processed versions.
+        :param doc_name: Name of the generated documentation file.
+        :param build_folder: Name of the build folder.
+        """
+        self.build_folder = build_folder
+        """Name of the build folder"""
+
+        self.doc_name = doc_name
+        """Name of the generated documentation file"""
+
+        super().__init__(path=path, repository_path=repository_path, git_url=git_url, minimum_version=minimum_version,
+                         processed_versions_file=processed_versions_file)
+
+        self.load_processed_versions()
+        self.initialize_repo()
+
     @classmethod
     def command(cls, version: Version) -> str:
         """
@@ -265,7 +286,6 @@ class TagDocumentation(Documentation, _ProcessedVersions):
                 joinpath(self.build_folder).\
                 joinpath(version.name).\
                 joinpath(self.doc_name)
-            print(build_path)
             return build_path
         # Error
         else:
