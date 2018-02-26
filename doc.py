@@ -6,7 +6,7 @@ from typing import List, Tuple, Optional, TypeVar
 from pkg_resources import parse_version, SetuptoolsVersion
 from pathlib import Path
 from pygit2 import clone_repository, Repository, GIT_FETCH_PRUNE
-
+from abc import ABC, abstractmethod
 
 V = TypeVar("V", bound="Version")
 
@@ -46,7 +46,7 @@ class Version(object):
         return self.version.__ne__(other.version)
 
 
-class Documentation(object):
+class Documentation(ABC):
     """
     Abstract class for all documentation updaters
     """
@@ -54,12 +54,14 @@ class Documentation(object):
         self.versions: List[Version] = []
         """List of version which have to be updated"""
 
+    @abstractmethod
     def check_updates(self):
         """
         Check for new available versions.
         """
         pass
 
+    @abstractmethod
     def update_version(self, version: Version) -> Optional[Path]:
         """
         Generate documentation for selected version.
@@ -88,16 +90,8 @@ class TagDocumentation(Documentation):
     Base class for documentation updaters which are using tags to find new versions.
     """
 
-    processed_versions_file: str
-    """File name of the processed versions"""
-
-    build_folder: str = "build"
-    """Name of the build folder"""
-
-    doc_name: str
-    """Name of the generated documentation file"""
-
-    def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str):
+    def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str,
+                 processed_versions_file: str, doc_name: str, build_folder: str = "build"):
         """
         Initialize updater object with configuration.
 
@@ -105,6 +99,9 @@ class TagDocumentation(Documentation):
         :param repository_path: Path to cloned repository.
         :param git_url: URL to git repository.
         :param minimum_version: Minimum supported version.
+        :param processed_versions_file: File name of the processed versions.
+        :param doc_name: Name of the generated documentation file.
+        :param build_folder: Name of the build folder.
         """
         super().__init__()
 
@@ -123,8 +120,17 @@ class TagDocumentation(Documentation):
         self.minimum_version = Version(minimum_version)
         """Minimum supported version"""
 
+        self.processed_versions_file = processed_versions_file
+        """File name of the processed versions"""
+
         self.processed_versions: List[Version] = []
         """List of already versions"""
+
+        self.build_folder = build_folder
+        """Name of the build folder"""
+
+        self.doc_name = doc_name
+        """Name of the generated documentation file"""
 
         self.load_processed_versions()
         self.initialize_repo()
@@ -135,7 +141,7 @@ class TagDocumentation(Documentation):
 
         Versions are available in the `processed_versions` variable.
         """
-        with open(self.__class__.processed_versions_file) as f:
+        with open(self.processed_versions_file) as f:
             config = yaml.load(f)
             versions = config["versions"]
             self.processed_versions = [Version(v) for v in versions]
@@ -159,7 +165,7 @@ class TagDocumentation(Documentation):
         """
         Save processed version to file on disk.
         """
-        with open(self.__class__.processed_versions_file, "w") as f:
+        with open(self.processed_versions_file, "w") as f:
             versions = [v.name for v in sorted(self.processed_versions)]
             config = {"versions": versions}
             yaml.dump(config, f, default_flow_style=False)
@@ -240,9 +246,10 @@ class TagDocumentation(Documentation):
             self.save_processed_versions()
 
             build_path = self.path.\
-                joinpath(self.__class__.build_folder).\
+                joinpath(self.build_folder).\
                 joinpath(version.name).\
-                joinpath(self.__class__.doc_name)
+                joinpath(self.doc_name)
+            print(build_path)
             return build_path
         # Error
         else:
