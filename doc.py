@@ -50,11 +50,16 @@ class Documentation(ABC):
     """
     Abstract class for all documentation updaters
     """
-    def __init__(self, **kwargs):
+    def __init__(self, path: str, **kwargs):
         """
         Initialize Documentation updated object with empty list of version to update.
+
+        :param path: Path to the documentation generator.
         :param kwargs: Parameters passed by child classes.
         """
+
+        self.path = Path(path)
+        """Path to the documentation generator"""
 
         self.versions: List[Version] = []
         """List of version which have to be updated"""
@@ -109,6 +114,8 @@ class _ProcessedVersions:
         self.processed_versions: List[Version] = []
         """List of already versions"""
 
+        self.load_processed_versions()
+
     def load_processed_versions(self):
         """
         Load processed versions from file on disk.
@@ -130,32 +137,27 @@ class _ProcessedVersions:
             yaml.dump(config, f, default_flow_style=False)
 
 
-class _TagUpdater(Documentation, _ProcessedVersions):
-    def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str, **kwargs):
+class _RepoUpdater(Documentation):
+    """
+    Handle initializing repository.
+    """
+    def __init__(self, repository_path: str, git_url: str, **kwargs):
         """
-        Handle updating version from the repository tags.
+        Handle initializing repository.
 
-        :param path: Path to the documentation generator.
         :param repository_path: Path to cloned repository.
         :param git_url: URL to git repository.
-        :param minimum_version: Minimum supported version.
         """
-        self.path = Path(path)
-        """Path to documentation generator"""
-
-        self.repository_path = self.path.joinpath(repository_path)
-        """Path to GIT repository"""
-
         self.git_url = git_url
         """URL to git repository"""
 
         self.repo: Repository = None
         """Git repository"""
 
-        self.minimum_version = Version(minimum_version)
-        """Minimum supported version"""
-
         super().__init__(**kwargs)
+
+        self.repository_path = self.path.joinpath(repository_path)
+        """Path to cloned repository"""
 
     def initialize_repo(self):
         """
@@ -172,6 +174,36 @@ class _TagUpdater(Documentation, _ProcessedVersions):
         else:
             self.repo = Repository(str(self.repository_path))
 
+    def check_updates(self):
+        """
+        Initialize repository and check for new available versions.
+        """
+        self.initialize_repo()
+        super().check_updates()
+
+    @abstractmethod
+    def update_version(self, version: Version) -> Optional[Path]:
+        pass
+
+
+class _TagUpdater(_RepoUpdater, _ProcessedVersions):
+    """
+    Handle updating version from the repository tags.
+    """
+    def __init__(self, repository_path: str, git_url: str, minimum_version: str, **kwargs):
+        """
+        Handle updating version from the repository tags.
+
+        :param repository_path: Path to cloned repository.
+        :param git_url: URL to git repository.
+        :param minimum_version: Minimum supported version.
+        """
+
+        self.minimum_version = Version(minimum_version)
+        """Minimum supported version"""
+
+        super().__init__(repository_path=repository_path, git_url=git_url, **kwargs)
+
     @classmethod
     def normalize_tag(cls, tag: str) -> str:
         """
@@ -183,9 +215,7 @@ class _TagUpdater(Documentation, _ProcessedVersions):
 
     def check_updates(self):
         """
-        Check for new available versions.
-
-        Fetches new tags
+        Check for new available versions from tags.
         """
         super().check_updates()
         print(f"{self.__class__.__name__} fetching...")
@@ -216,7 +246,7 @@ class _TagUpdater(Documentation, _ProcessedVersions):
         self.versions = sorted(versions)
 
     @abstractmethod
-    def update_version(self, version: Version):
+    def update_version(self, version: Version) -> Optional[Path]:
         pass
 
 
@@ -246,9 +276,6 @@ class TagDocumentation(_TagUpdater):
 
         super().__init__(path=path, repository_path=repository_path, git_url=git_url, minimum_version=minimum_version,
                          processed_versions_file=processed_versions_file)
-
-        self.load_processed_versions()
-        self.initialize_repo()
 
     @classmethod
     def command(cls, version: Version) -> str:
