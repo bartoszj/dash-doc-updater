@@ -50,9 +50,16 @@ class Documentation(ABC):
     """
     Abstract class for all documentation updaters
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
+        """
+        Initialize Documentation updated object with empty list of version to update.
+        :param kwargs: Parameters passed by child classes.
+        """
+
         self.versions: List[Version] = []
         """List of version which have to be updated"""
+
+        super().__init__(**kwargs)
 
     @abstractmethod
     def check_updates(self):
@@ -85,7 +92,42 @@ class Documentation(ABC):
         return updated
 
 
-class TagDocumentation(Documentation):
+class _ProcessedVersions:
+    def __init__(self, processed_versions_file: str, **kwargs):
+        """
+        Initializer for processed versions, which loads processed versions from the file on disk.
+
+        :param processed_versions_file: File name of the processed versions.
+        """
+
+        self.processed_versions_file = processed_versions_file
+        """File name of the processed versions"""
+
+        self.processed_versions: List[Version] = []
+        """List of already versions"""
+
+    def load_processed_versions(self):
+        """
+        Load processed versions from file on disk.
+
+        Versions are available in the `processed_versions` variable.
+        """
+        with open(self.processed_versions_file) as f:
+            config = yaml.load(f)
+            versions = config["versions"]
+            self.processed_versions = [Version(v) for v in versions]
+
+    def save_processed_versions(self):
+        """
+        Save processed version to file on disk.
+        """
+        with open(self.processed_versions_file, "w") as f:
+            versions = [v.name for v in sorted(self.processed_versions)]
+            config = {"versions": versions}
+            yaml.dump(config, f, default_flow_style=False)
+
+
+class TagDocumentation(Documentation, _ProcessedVersions):
     """
     Base class for documentation updaters which are using tags to find new versions.
     """
@@ -103,8 +145,6 @@ class TagDocumentation(Documentation):
         :param doc_name: Name of the generated documentation file.
         :param build_folder: Name of the build folder.
         """
-        super().__init__()
-
         self.path = Path(path)
         """Path to Kubernetes documentation generator"""
 
@@ -120,31 +160,16 @@ class TagDocumentation(Documentation):
         self.minimum_version = Version(minimum_version)
         """Minimum supported version"""
 
-        self.processed_versions_file = processed_versions_file
-        """File name of the processed versions"""
-
-        self.processed_versions: List[Version] = []
-        """List of already versions"""
-
         self.build_folder = build_folder
         """Name of the build folder"""
 
         self.doc_name = doc_name
         """Name of the generated documentation file"""
 
+        super().__init__(processed_versions_file=processed_versions_file)
+
         self.load_processed_versions()
         self.initialize_repo()
-
-    def load_processed_versions(self):
-        """
-        Load processed versions from file on disk.
-
-        Versions are available in the `processed_versions` variable.
-        """
-        with open(self.processed_versions_file) as f:
-            config = yaml.load(f)
-            versions = config["versions"]
-            self.processed_versions = [Version(v) for v in versions]
 
     def initialize_repo(self):
         """
@@ -160,15 +185,6 @@ class TagDocumentation(Documentation):
         # Read repository
         else:
             self.repo = Repository(str(self.repository_path))
-
-    def save_processed_versions(self):
-        """
-        Save processed version to file on disk.
-        """
-        with open(self.processed_versions_file, "w") as f:
-            versions = [v.name for v in sorted(self.processed_versions)]
-            config = {"versions": versions}
-            yaml.dump(config, f, default_flow_style=False)
 
     @classmethod
     def normalize_tag(cls, tag: str) -> str:
