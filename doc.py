@@ -74,7 +74,7 @@ class Documentation(ABC):
         pass
 
     @abstractmethod
-    def update_version(self, version: Version) -> Optional[Path]:
+    def build_version(self, version: Version) -> Optional[Path]:
         """
         Generate documentation for selected version.
         :param version: Version to generate.
@@ -90,14 +90,14 @@ class Documentation(ABC):
         updated: List[Tuple[Version, Path]] = []
         self.check_updates()
         for version in self.versions:
-            path = self.update_version(version)
+            path = self.build_version(version)
             if path is not None:
                 updated.append((version, path))
 
         return updated
 
 
-class _ProcessedVersions:
+class ProcessedVersions:
     """
     Handle reading and writing processed versions.
     """
@@ -137,7 +137,7 @@ class _ProcessedVersions:
             yaml.dump(config, f, default_flow_style=False)
 
 
-class _RepoUpdater(Documentation):
+class RepoUpdater(Documentation):
     """
     Handle initializing repository.
     """
@@ -180,8 +180,12 @@ class _RepoUpdater(Documentation):
         """
         self.initialize_repo()
 
+        print(f"{self.__class__.__name__} fetching...")
+        for remote in self.repo.remotes:
+            remote.fetch(prune=GIT_FETCH_PRUNE)
 
-class _TagUpdater(_RepoUpdater, _ProcessedVersions):
+
+class TagUpdater(RepoUpdater, ProcessedVersions):
     """
     Handle updating version from the repository tags.
     """
@@ -211,9 +215,6 @@ class _TagUpdater(_RepoUpdater, _ProcessedVersions):
         Check for new available versions from tags.
         """
         super().check_updates()
-        print(f"{self.__class__.__name__} fetching...")
-        for remote in self.repo.remotes:
-            remote.fetch(prune=GIT_FETCH_PRUNE)
 
         # Parse versions
         tag_prefix = "refs/tags/"
@@ -239,7 +240,7 @@ class _TagUpdater(_RepoUpdater, _ProcessedVersions):
         self.versions = sorted(versions)
 
 
-class BaseBuilder(Documentation, _ProcessedVersions):
+class BaseBuilder(Documentation, ProcessedVersions):
     """
     Handle building documentation.
     """
@@ -268,7 +269,7 @@ class BaseBuilder(Documentation, _ProcessedVersions):
         """
         return f"./build.sh {version.name}"
 
-    def update_version(self, version: Version) -> Optional[Path]:
+    def build_version(self, version: Version) -> Optional[Path]:
         """
         Generate documentation for selected version.
 
@@ -307,7 +308,7 @@ class BaseBuilder(Documentation, _ProcessedVersions):
         return None
 
 
-class TagDocumentation(_TagUpdater, BaseBuilder):
+class TagDocumentation(TagUpdater, BaseBuilder):
     """
     Base class for documentation updaters which are using tags to find new versions.
     """

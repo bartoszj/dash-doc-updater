@@ -12,3 +12,8 @@ packer:
   repository_path: packer
   git_url: https://github.com/hashicorp/packer.git
   minimum_version: "1.0.0"
+
+terraform:
+  path: ../terraform-dash-doc-generator
+  repository_path: terraform-website
+  git_url: https://github.com/hashicorp/terraform-website.git

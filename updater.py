@@ -5,6 +5,7 @@ from typing import List
 from doc import Documentation
 from kubernetes import Kubernetes
 from packer import Packer
+from terraform import Terraform
 
 CONFIG_PATH = "config.yml"
 
@@ -41,6 +42,15 @@ if __name__ == '__main__':
         minimum_version=packer_config["minimum_version"]
     )
     docs.append(packer)
+
+    # Terraform
+    terraform_config = config["terraform"]
+    terraform = Terraform(
+        path=terraform_config["path"],
+        repository_path=terraform_config["repository_path"],
+        git_url=terraform_config["git_url"]
+    )
+    docs.append(terraform)
 
     # Start processing
     for doc in docs:
