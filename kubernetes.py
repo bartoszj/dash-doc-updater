@@ -9,6 +9,10 @@ class Kubernetes(TagDocumentation):
         super().__init__(path=path, repository_path=repository_path, git_url=git_url, minimum_version=minimum_version,
                          processed_versions_file="kubernetes.yml", doc_name="Kubernetes.tgz")
 
+    @property
+    def name(self):
+        return "Kubernetes"
+
     @classmethod
     def normalize_tag(cls, tag: str) -> str:
         version_prefix = "v"

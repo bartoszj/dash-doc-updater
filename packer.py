@@ -9,6 +9,10 @@ class Packer(TagDocumentation):
         super().__init__(path=path, repository_path=repository_path, git_url=git_url, minimum_version=minimum_version,
                          processed_versions_file="packer.yml", doc_name="Packer.tgz")
 
+    @property
+    def name(self):
+        return "Packer"
+
     @classmethod
     def normalize_tag(cls, tag: str) -> str:
         version_prefix = "v"

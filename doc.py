@@ -18,6 +18,10 @@ class Version(object):
         self.version: SetuptoolsVersion = parse_version(version)
         """Version object"""
 
+    @property
+    def is_stable(self):
+        return not self.version.is_prerelease and not self.version.is_postrelease
+
     def __str__(self):
         return f"<Version({self.name}, {str(self.version)})>"
 
@@ -65,6 +69,11 @@ class Documentation(ABC):
         """List of version which have to be updated"""
 
         super().__init__(**kwargs)
+
+    @property
+    @abstractmethod
+    def name(self):
+        pass
 
     @abstractmethod
     def check_updates(self):
@@ -167,7 +176,7 @@ class RepoUpdater(Documentation):
         """
         # Initialize new repository
         if not self.repository_path.exists():
-            print(f"{self.__class__.__name__} clonning...")
+            print(f"{self.name} clonning...")
             self.repository_path.mkdir(parents=True)
             self.repo = clone_repository(self.git_url, str(self.repository_path))
         # Read repository
@@ -180,7 +189,7 @@ class RepoUpdater(Documentation):
         """
         self.initialize_repo()
 
-        print(f"{self.__class__.__name__} fetching...")
+        print(f"{self.name} fetching...")
         for remote in self.repo.remotes:
             remote.fetch(prune=GIT_FETCH_PRUNE)
 
@@ -276,7 +285,7 @@ class BaseBuilder(Documentation, ProcessedVersions):
         :param version: Version to generate.
         :return: Path to generated documentation.
         """
-        print(f"{self.__class__.__name__} {version.name} processing...")
+        print(f"{self.name} {version.name} processing...")
         start_time = time.time()
         process = subprocess.run(
             self.__class__.command(version),
@@ -289,7 +298,7 @@ class BaseBuilder(Documentation, ProcessedVersions):
 
         # Success
         if process.returncode == 0:
-            print(f"{self.__class__.__name__} {version.name} success {time_elapsed:0.3f}s...")
+            print(f"{self.name} {version.name} success {time_elapsed:0.3f}s...")
             self.processed_versions.append(version)
             self.save_processed_versions()
 
@@ -300,7 +309,7 @@ class BaseBuilder(Documentation, ProcessedVersions):
             return build_path
         # Error
         else:
-            print(f"{self.__class__.__name__} {version.name} failed...")
+            print(f"{self.name} {version.name} failed...")
             print("stdout:")
             print(process.stdout)
             print("stderr:")

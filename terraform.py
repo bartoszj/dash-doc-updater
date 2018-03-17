@@ -11,6 +11,10 @@ class Terraform(RepoUpdater, BaseBuilder, ProcessedVersions):
         super().__init__(path=path, repository_path=repository_path, git_url=git_url,
                          processed_versions_file="terraform.yml", doc_name="Terraform.tgz")
 
+    @property
+    def name(self):
+        return "Terraform"
+
     def check_updates(self):
         super().check_updates()
 
