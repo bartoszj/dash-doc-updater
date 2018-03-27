@@ -192,6 +192,7 @@ class RepoUpdater(Documentation):
         print(f"{self.name} fetching...")
         for remote in self.repo.remotes:
             remote.fetch(prune=GIT_FETCH_PRUNE)
+            remote.fetch(prune=GIT_FETCH_PRUNE, refspecs=["refs/tags/*:refs/tags/*"])
 
 
 class TagUpdater(RepoUpdater, ProcessedVersions):
