@@ -3,7 +3,8 @@ import re
 import subprocess
 import time
 from typing import List, Tuple, Optional, TypeVar
-from pkg_resources import parse_version, SetuptoolsVersion
+from pkg_resources import parse_version
+from setuptools.extern.packaging.version import Version as SetuptoolsVersion
 from pathlib import Path
 from pygit2 import clone_repository, Repository, GIT_FETCH_PRUNE
 from abc import ABC, abstractmethod
