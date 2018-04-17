@@ -180,6 +180,7 @@ class RepoUpdater(Documentation):
             print(f"{self.name} clonning...")
             self.repository_path.mkdir(parents=True)
             self.repo = clone_repository(self.git_url, str(self.repository_path))
+            self.repo.create_reference("refs/remotes/origin/HEAD", f"refs/remotes/origin/{self.repo.head.shorthand}")
         # Read repository
         else:
             self.repo = Repository(str(self.repository_path))
