@@ -5,7 +5,7 @@ kubernetes:
   path: ../kubernetes-docset
   repository_path: kubernetes
   git_url: https://github.com/kubernetes/kubernetes.git
-  minimum_version: "1.9.0"
+  minimum_version: "1.6.0"
 
 packer:
   path: ../packer-dash-doc-generator
