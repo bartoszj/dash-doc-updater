@@ -201,7 +201,7 @@ class TagUpdater(RepoUpdater, ProcessedVersions):
     """
     Handle updating version from the repository tags.
     """
-    def __init__(self, minimum_version: str, **kwargs):
+    def __init__(self, minimum_version: str, stable_version: bool = False, **kwargs):
         """
         Handle updating version from the repository tags.
 
@@ -210,6 +210,9 @@ class TagUpdater(RepoUpdater, ProcessedVersions):
 
         self.minimum_version = Version(minimum_version)
         """Minimum supported version"""
+
+        self.stable_version = stable_version
+        """Should only stable version be processed"""
 
         super().__init__(**kwargs)
 
@@ -240,6 +243,10 @@ class TagUpdater(RepoUpdater, ProcessedVersions):
             version = Version(tag)
             # Only newer tags
             if version < self.minimum_version:
+                continue
+
+            # Process only stable versions
+            if self.stable_version and not version.is_stable:
                 continue
 
             # Only not already processed versions:
