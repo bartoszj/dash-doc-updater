@@ -7,6 +7,12 @@ kubernetes:
   git_url: https://github.com/kubernetes/kubernetes.git
   minimum_version: "1.6.0"
 
+consul:
+  path: ../consul-dash-doc-generator
+  repository_path: consul
+  git_url: https://github.com/hashicorp/consul.git
+  minimum_version: "0.8.0"
+
 packer:
   path: ../packer-dash-doc-generator
   repository_path: packer
@@ -17,3 +23,9 @@ terraform:
   path: ../terraform-dash-doc-generator
   repository_path: terraform-website
   git_url: https://github.com/hashicorp/terraform-website.git
+
+vault:
+  path: ../vault-dash-doc-generator
+  repository_path: vault
+  git_url: https://github.com/hashicorp/vault.git
+  minimum_version: "0.5.0"

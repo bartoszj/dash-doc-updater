@@ -7,8 +7,10 @@ from typing import List, Tuple
 from pathlib import Path
 from doc import Documentation, Version
 from kubernetes import Kubernetes
+from consul import Consul
 from packer import Packer
 from terraform import Terraform
+from vault import Vault
 
 CONFIG_PATH = "config.yml"
 
@@ -182,6 +184,16 @@ if __name__ == '__main__':
     )
     docs.append(kubernetes)
 
+    # Consul
+    consul_config = config["consul"]
+    consul = Consul(
+        path=consul_config["path"],
+        repository_path=consul_config["repository_path"],
+        git_url=consul_config["git_url"],
+        minimum_version=consul_config["minimum_version"]
+    )
+    docs.append(consul)
+
     # Packer
     packer_config = config["packer"]
     packer = Packer(
@@ -200,6 +212,16 @@ if __name__ == '__main__':
         git_url=terraform_config["git_url"]
     )
     docs.append(terraform)
+
+    # Vault
+    vault_config = config["vault"]
+    vault = Vault(
+        path=vault_config["path"],
+        repository_path=vault_config["repository_path"],
+        git_url=vault_config["git_url"],
+        minimum_version=vault_config["minimum_version"]
+    )
+    docs.append(vault)
 
     # Start processing.
     for doc in docs:
