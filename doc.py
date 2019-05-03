@@ -133,7 +133,7 @@ class ProcessedVersions:
         Versions are available in the `processed_versions` variable.
         """
         with open(self.processed_versions_file) as f:
-            config = yaml.load(f)
+            config = yaml.load(f, Loader=yaml.BaseLoader)
             versions = config["versions"]
             self.processed_versions = [Version(v) for v in versions]
 

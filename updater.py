@@ -160,7 +160,7 @@ class Dash:
 
 def load_config() -> dict:
     with open(CONFIG_PATH, "r") as f:
-        return yaml.load(f)
+        return yaml.load(f, Loader=yaml.BaseLoader)
 
 
 if __name__ == '__main__':
