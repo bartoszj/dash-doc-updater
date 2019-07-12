@@ -7,7 +7,7 @@ class Packer(TagDocumentation):
     """
     def __init__(self, path: str, repository_path: str, git_url: str, minimum_version: str):
         super().__init__(path=path, repository_path=repository_path, git_url=git_url, minimum_version=minimum_version,
-                         processed_versions_file="packer.yml", doc_name="Packer.tgz")
+                         stable_version=True, processed_versions_file="packer.yml", doc_name="Packer.tgz")
 
     @property
     def name(self):
