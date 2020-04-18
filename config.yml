@@ -28,4 +28,4 @@ vault:
   path: ../vault-dash-doc-generator
   repository_path: vault
   git_url: https://github.com/hashicorp/vault.git
-  minimum_version: "0.5.0"
+  minimum_version: "1.4.0"
