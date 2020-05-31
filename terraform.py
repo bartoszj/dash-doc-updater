@@ -44,7 +44,3 @@ class Terraform(RepoUpdater, BaseBuilder, ProcessedVersions):
             return
 
         self.versions = [version]
-
-    @classmethod
-    def command(cls, version: Version):
-        return f"./build_current_from_0.10.sh {version.name}"
