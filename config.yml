@@ -11,7 +11,7 @@ consul:
   path: ../consul-dash-doc-generator
   repository_path: consul
   git_url: https://github.com/hashicorp/consul.git
-  minimum_version: "0.8.0"
+  minimum_version: "1.8.0"
 
 packer:
   path: ../packer-dash-doc-generator
