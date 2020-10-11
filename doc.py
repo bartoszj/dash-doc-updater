@@ -2,6 +2,7 @@ import yaml
 import re
 import subprocess
 import time
+import pygit2
 from typing import List, Tuple, Optional, TypeVar
 from pkg_resources import parse_version
 from setuptools.extern.packaging.version import Version as SetuptoolsVersion
@@ -148,6 +149,16 @@ class ProcessedVersions:
 
 
 class RepoUpdater(Documentation):
+    class Callbacks(pygit2.RemoteCallbacks):
+
+        def credentials(self, url, username_from_url, allowed_types):
+            if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERNAME:
+                return pygit2.Username("git")
+            elif allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY:
+                return pygit2.KeypairFromAgent("git")
+            else:
+                return None
+
     """
     Handle initializing repository.
     """
@@ -179,7 +190,7 @@ class RepoUpdater(Documentation):
         if not self.repository_path.exists():
             print(f"{self.name} clonning...")
             self.repository_path.mkdir(parents=True)
-            self.repo = clone_repository(self.git_url, str(self.repository_path))
+            self.repo = clone_repository(self.git_url, str(self.repository_path), callbacks=self.Callbacks())
             self.repo.create_reference("refs/remotes/origin/HEAD", f"refs/remotes/origin/{self.repo.head.shorthand}")
         # Read repository
         else:
@@ -193,8 +204,8 @@ class RepoUpdater(Documentation):
 
         print(f"{self.name} fetching...")
         for remote in self.repo.remotes:
-            remote.fetch(prune=GIT_FETCH_PRUNE)
-            remote.fetch(prune=GIT_FETCH_PRUNE, refspecs=["refs/tags/*:refs/tags/*"])
+            remote.fetch(prune=GIT_FETCH_PRUNE, callbacks=self.Callbacks())
+            remote.fetch(prune=GIT_FETCH_PRUNE, callbacks=self.Callbacks(), refspecs=["refs/tags/*:refs/tags/*"])
 
 
 class TagUpdater(RepoUpdater, ProcessedVersions):
