@@ -4,8 +4,8 @@ dash:
 kubernetes:
   path: ../kubernetes-docset
   repository_path: go/src/github.com/kubernetes/kubernetes
-#  git_url: https://github.com/kubernetes/kubernetes.git
-  git_url: ssh://git@github.com/kubernetes/kubernetes.git
+  git_url: https://github.com/kubernetes/kubernetes.git
+#  git_url: ssh://git@github.com/kubernetes/kubernetes.git
   minimum_version: "1.6.0"
 
 consul:
